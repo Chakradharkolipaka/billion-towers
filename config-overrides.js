@@ -1,0 +1,37 @@
+const webpack = require("webpack");
+
+module.exports = function override(config) {
+  const fallback = config.resolve.fallback || {};
+  Object.assign(fallback, {
+    crypto: require.resolve("crypto-browserify"),
+    stream: require.resolve("stream-browserify"),
+    assert: require.resolve("assert"),
+    http: require.resolve("stream-http"),
+    https: require.resolve("https-browserify"),
+    os: require.resolve("os-browserify"),
+    url: require.resolve("url"),
+    "process/browser": require.resolve("process/browser"),
+  });
+  config.resolve.fallback = fallback;
+  config.ignoreWarnings = [/Failed to parse source map/];
+  config.plugins = (config.plugins || []).concat([
+    new webpack.ProvidePlugin({
+      process: "process/browser",
+      Buffer: ["buffer", "Buffer"],
+    }),
+  ]);
+  return config;
+};
+
+module.exports.devServer = function (configFunction) {
+  return function (proxy, allowedHost) {
+    const config = configFunction(proxy, allowedHost);
+    if (Array.isArray(config.allowedHosts)) {
+      config.allowedHosts = config.allowedHosts.filter(Boolean);
+    }
+    if (!config.allowedHosts || config.allowedHosts.length === 0) {
+      config.allowedHosts = "all";
+    }
+    return config;
+  };
+};
