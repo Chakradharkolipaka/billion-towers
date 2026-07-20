@@ -11,6 +11,7 @@ const {
   getProductDetailsSummary,
   updateProduct,
   patchProduct,
+  updateBlockchainListing,
   deleteProduct,
   deleteProducts,
   getProductReviews,
@@ -103,6 +104,17 @@ router
     validateProductIdParam,
     verifyProductExists,
     deleteProduct,
+  );
+
+// Special route for blockchain listing updates (no field validation)
+router
+  .route("/admin/product/:id/blockchain")
+  .patch(
+    isAuthenticatedUser,
+    authorizeRoles(ROLES.ADMIN),
+    validateProductIdParam,
+    verifyProductExists,
+    updateBlockchainListing,
   );
 
 router

@@ -1,3 +1,4 @@
+/* global BigInt */
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -101,6 +102,82 @@ const InvestCheckoutModal = ({ property, isOpen, onClose }) => {
       if (method === "wallet" && !walletAddress) {
         const connected = await connect();
         walletAddress = connected?.address;
+      }
+
+      // ✅ BLOCKCHAIN INTEGRATION: Execute smart contract purchase for wallet payments
+      if (method === "wallet") {
+        // Check if property is listed on blockchain
+        if (!property.blockchainListing?.listed || !property.blockchainListing?.listingId) {
+          throw new Error("This property is not yet listed on the blockchain. Please contact admin to list it first.");
+        }
+        
+        toast.loading("Initiating blockchain transaction...", { id: "blockchain" });
+        
+        try {
+          // Import contract utilities
+          const { getMarketplaceContract } = await import("../../utils/contracts");
+          const { parseUnits } = await import("ethers");
+          
+          // Get marketplace contract
+          const marketplace = await getMarketplaceContract();
+          const listingId = property.blockchainListing.listingId;
+          
+          // Calculate total price from listing's price per unit
+          // Convert string to BigInt using ethers
+          const pricePerUnitWei = parseUnits(property.blockchainListing.pricePerUnit, 0); // Already in wei
+          const sharesBigInt = parseUnits(shares.toString(), 0);
+          const totalPriceInWei = pricePerUnitWei * sharesBigInt;
+          
+          // Get provider and add gas buffer (higher for volatile Arbitrum network)
+          const provider = marketplace.runner.provider;
+          const feeData = await provider.getFeeData();
+          const maxFeePerGas = (feeData.maxFeePerGas * 150n) / 100n;
+          const maxPriorityFeePerGas = (feeData.maxPriorityFeePerGas * 150n) / 100n;
+          
+          toast.loading(`Confirm transaction in wallet... (${(Number(totalPriceInWei) / 1e18).toFixed(6)} ETH)`, { id: "blockchain" });
+          
+          // Execute purchase on marketplace contract
+          const tx = await marketplace.purchase(
+            listingId,
+            shares,
+            {
+              value: totalPriceInWei,
+              maxFeePerGas,
+              maxPriorityFeePerGas,
+            }
+          );
+          
+          toast.loading("Waiting for confirmation...", { id: "blockchain" });
+          const receipt = await tx.wait();
+          
+          toast.success("Blockchain transaction confirmed!", { id: "blockchain" });
+          
+          // Add transaction details to payment meta
+          paymentMeta.transactionHash = receipt.hash;
+          paymentMeta.blockNumber = receipt.blockNumber;
+          paymentMeta.gasUsed = receipt.gasUsed.toString();
+          paymentMeta.listingId = listingId;
+          paymentMeta.ethPaid = (Number(totalPriceInWei) / 1e18).toFixed(18);
+          
+        } catch (blockchainError) {
+          console.error("Blockchain transaction failed:", blockchainError);
+          
+          let errorMsg = "Blockchain transaction failed";
+          if (blockchainError.message.includes("user rejected")) {
+            errorMsg = "Transaction cancelled by user";
+          } else if (blockchainError.message.includes("insufficient funds")) {
+            errorMsg = "Insufficient ETH in wallet";
+          } else if (blockchainError.message.includes("listingNotActive")) {
+            errorMsg = "This listing is no longer active";
+          } else if (blockchainError.message.includes("invalidPurchaseAmount")) {
+            errorMsg = "Invalid purchase amount or not enough tokens available";
+          } else if (blockchainError.message) {
+            errorMsg = blockchainError.message;
+          }
+          
+          toast.error(errorMsg, { id: "blockchain" });
+          throw new Error(errorMsg);
+        }
       }
 
       if (method === "card") {

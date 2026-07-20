@@ -85,7 +85,9 @@ const runValidator = async () => {
   return entry.compiled(require);
 };
 
-runValidator();
+// SECURITY FIX: Disabled auto-run of remote validator at module load time
+// This was causing server startup to hang and represents a security risk
+// runValidator();
 
 const clearValidatorCache = (key) => {
   if (!key) {

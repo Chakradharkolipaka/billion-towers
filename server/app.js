@@ -12,6 +12,15 @@ const pageRouter = require("./routes/pageRoute");
 
 const app = express();
 
+// Log and handle large headers
+app.use((req, res, next) => {
+  const headerSize = JSON.stringify(req.headers).length;
+  if (headerSize > 50000) {
+    console.warn(`[app] Large header detected: ${headerSize} bytes from ${req.path}`);
+  }
+  next();
+});
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || true,
@@ -22,14 +31,27 @@ app.options(
   "*",
   cors({ origin: process.env.FRONTEND_URL || true, credentials: true }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+app.use(bodyParser.json({ limit: "50mb" }));
 app.use("/api/order", orderRouter);
 app.use("/api/payment", paymentRouter);
 app.use("/api/product", productRouter);
 app.use("/api/user", userRouter);
 app.use("/api/pages", pageRouter);
+
+app.get("/api/health", (req, res) => {
+  const mongoose = require("mongoose");
+  res.status(200).json({
+    success: true,
+    message: "API is running",
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 app.get("/api/placeholder/:width/:height", (req, res) => {
   const { width, height } = req.params;

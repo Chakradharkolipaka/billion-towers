@@ -122,7 +122,7 @@ const detailsToSpecifications = (details) => [
   { title: "Annual Yield", description: String(details.financials?.annualYield ?? "") },
   { title: "Monthly Expenses", description: String(details.financials?.expenses ?? "") },
   { title: "Net Monthly Income", description: String(details.financials?.netIncome ?? "") },
-];
+].filter(spec => spec.description && spec.description.trim() !== "" && spec.description !== "null");
 
 const mergeDetailsFromBody = (body = {}, existingProduct = null) => {
   const current = existingProduct

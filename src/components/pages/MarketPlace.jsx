@@ -8,6 +8,7 @@ import { mapProductToProperty } from '../../utils/propertyMapper';
 import { containerVariants, itemVariants } from './home/homeMotion';
 import { WalletProvider } from '../../context/WalletContext';
 import MarketplaceWalletBar from '../marketplace/MarketplaceWalletBar';
+import MarketplaceOnChainPanel from '../marketplace/MarketplaceOnChainPanel';
 import InvestCheckoutModal from '../marketplace/InvestCheckoutModal';
 
 const categories = [
@@ -38,7 +39,7 @@ const MarketPlace = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [viewMode, setViewMode] = useState('grid');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 20]);
+  const [priceRange, setPriceRange] = useState([0, 500000]); // Increased max to 500k to show all properties
   const [properties, setProperties] = useState(staticProperties);
   const [filteredProperties, setFilteredProperties] = useState(staticProperties);
   const [checkoutProperty, setCheckoutProperty] = useState(null);
@@ -155,8 +156,9 @@ const MarketPlace = () => {
       </motion.section>
 
       {/* Wallet + payment methods */}
-      <section className="px-4 pb-8 sm:px-6 lg:px-8">
+      <section className="space-y-6 px-4 pb-8 sm:px-6 lg:px-8">
         <MarketplaceWalletBar />
+        <MarketplaceOnChainPanel />
       </section>
 
       {/* Filters */}

@@ -87,30 +87,62 @@ exports.getAdminProductById = asyncErrorHandler(async (req, res, next) => {
 
 // CREATE
 exports.createProduct = asyncErrorHandler(async (req, res, next) => {
+  console.log("[CREATE PRODUCT] Starting product creation");
+  console.log("[CREATE PRODUCT] Request body:", JSON.stringify(req.body, null, 2));
+  console.log("[CREATE PRODUCT] Specifications received:", JSON.stringify(req.body.specifications, null, 2));
+  
   const payload = applyProductDefaults(req.body);
+  console.log("[CREATE PRODUCT] After defaults - specifications:", JSON.stringify(payload.specifications, null, 2));
 
-  payload.images = await buildProductImages(payload.images);
-  payload.brand = await buildBrand(payload.logo, payload.brandname);
+  try {
+    console.log("[CREATE PRODUCT] Building images from:", payload.images);
+    payload.images = await buildProductImages(payload.images);
+    console.log("[CREATE PRODUCT] Images built successfully:", payload.images);
+  } catch (error) {
+    console.error("[CREATE PRODUCT] Error building images:", error);
+    throw error;
+  }
+
+  try {
+    console.log("[CREATE PRODUCT] Building brand from logo:", payload.logo, "and name:", payload.brandname);
+    payload.brand = await buildBrand(payload.logo, payload.brandname);
+    console.log("[CREATE PRODUCT] Brand built successfully:", payload.brand);
+  } catch (error) {
+    console.error("[CREATE PRODUCT] Error building brand:", error);
+    throw error;
+  }
+
   payload.user = req.user._id;
 
   delete payload.logo;
   delete payload.brandname;
 
   if (req.body.details) {
+    console.log("[CREATE PRODUCT] Processing details section");
     const mergedDetails = mergeDetailsFromBody(req.body.details);
     const synced = syncDetailsToProductUpdate(mergedDetails);
     payload.details = synced.details;
     payload.specifications = synced.specifications;
     payload.stock = synced.stock;
+    console.log("[CREATE PRODUCT] After syncing details - specifications:", JSON.stringify(payload.specifications, null, 2));
   }
 
-  const product = await Product.create(payload);
+  console.log("[CREATE PRODUCT] Final payload before save:", JSON.stringify(payload, null, 2));
+  
+  try {
+    const product = await Product.create(payload);
+    console.log("[CREATE PRODUCT] Product created successfully with ID:", product._id);
 
-  res.status(201).json({
-    success: true,
-    message: "Product created successfully",
-    product,
-  });
+    res.status(201).json({
+      success: true,
+      message: "Product created successfully",
+      product,
+    });
+  } catch (dbError) {
+    console.error("[CREATE PRODUCT] Database error:", dbError.message);
+    console.error("[CREATE PRODUCT] Database error details:", dbError);
+    throw dbError;
+  }
 });
 
 // UPDATE — full replace of editable fields
@@ -203,6 +235,32 @@ exports.patchProduct = asyncErrorHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: "Product patched successfully",
+    product: updatedProduct,
+  });
+});
+
+// UPDATE — blockchain listing data (special endpoint for blockchain integration)
+exports.updateBlockchainListing = asyncErrorHandler(async (req, res, next) => {
+  const product = req.resource;
+  const { blockchainListing } = req.body;
+
+  if (!blockchainListing || typeof blockchainListing !== 'object') {
+    return next(new ErrorHandler("Invalid blockchain listing data", 400));
+  }
+
+  // Direct MongoDB update to set blockchainListing field
+  const updatedProduct = await Product.findByIdAndUpdate(
+    product._id,
+    { blockchainListing },
+    {
+      new: true,
+      runValidators: false, // Skip validation for blockchain data
+    },
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Blockchain listing updated successfully",
     product: updatedProduct,
   });
 });

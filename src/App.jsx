@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 // Layout
 import Layout from "./components/layout/Layout";
 import { AuthProvider } from "./context/AuthContext";
+import { WalletProvider } from "./context/WalletContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Pages
@@ -74,7 +75,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
+        <WalletProvider>
+          <Router>
         <div className="relative min-h-screen overflow-x-hidden bg-brand-app">
           <div
             className="pointer-events-none fixed inset-0 z-0 bg-brand-mesh opacity-90"
@@ -175,6 +177,7 @@ function App() {
           />
         </div>
         </Router>
+        </WalletProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

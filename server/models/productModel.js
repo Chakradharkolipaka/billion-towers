@@ -148,6 +148,17 @@ const productSchema = new mongoose.Schema({
       netIncome: { type: Number, min: 0 },
     },
   },
+  blockchainListing: {
+    listingId: { type: Number },
+    tokenAddress: { type: String },
+    tokensMinted: { type: Number, default: 0 },
+    tokensListed: { type: Number, default: 0 },
+    seller: { type: String },
+    pricePerUnit: { type: String },
+    listed: { type: Boolean, default: false },
+    listedAt: { type: Date },
+    transactionHash: { type: String },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

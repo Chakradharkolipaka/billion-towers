@@ -17,6 +17,8 @@ import {
   mapProductToForm,
   mapProductToProperty,
 } from "../../utils/propertyMapper";
+import MarketplaceControls from "../admin/MarketplaceControls";
+import TokenListingManager from "../admin/TokenListingManager";
 
 const emptyForm = {
   name: "",
@@ -65,6 +67,7 @@ const AdminDashboard = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    console.log(`[FORM] Field changed: ${name} = "${value}"`);
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -84,7 +87,26 @@ const AdminDashboard = () => {
     setSaving(true);
 
     try {
+      // Validation
+      if (!form.description || form.description.trim().length < 10) {
+        toast.error("Description must be at least 10 characters");
+        setSaving(false);
+        return;
+      }
+
+      if (!form.name || form.name.trim().length < 3) {
+        toast.error("Name must be at least 3 characters");
+        setSaving(false);
+        return;
+      }
+
       const payload = buildProductPayload(form);
+      
+      // Debug: Log what we're sending
+      console.log("[FRONTEND] Submitting payload:", JSON.stringify(payload, null, 2));
+      console.log("[FRONTEND] Description field:", payload.description);
+      console.log("[FRONTEND] Description length:", payload.description?.length);
+      
       if (editingId) {
         await productApi.updateProduct(editingId, payload);
         toast.success("Property updated");
@@ -95,6 +117,7 @@ const AdminDashboard = () => {
       resetForm();
       await loadProducts();
     } catch (error) {
+      console.error("[FRONTEND] Error:", error);
       toast.error(error.message || "Failed to save property");
     } finally {
       setSaving(false);
@@ -164,6 +187,11 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        {/* Marketplace Controls Section */}
+        <div className="mb-8">
+          <MarketplaceControls />
+        </div>
+
         <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
           <motion.form
             onSubmit={handleSubmit}
@@ -188,8 +216,24 @@ const AdminDashboard = () => {
                 <input name="name" value={form.name} onChange={handleChange} required className="admin-input" />
               </label>
               <label className="sm:col-span-2 block">
-                <span className="mb-2 block text-sm text-brand-ink-secondary">Description</span>
-                <textarea name="description" value={form.description} onChange={handleChange} required rows={4} className="admin-input" />
+                <span className="mb-2 block text-sm text-brand-ink-secondary">
+                  Description (min 10 characters) {form.description.length > 0 && `- ${form.description.length} chars`}
+                </span>
+                <textarea 
+                  name="description" 
+                  value={form.description} 
+                  onChange={handleChange} 
+                  required 
+                  minLength={10}
+                  rows={4} 
+                  className="admin-input"
+                  placeholder="Enter a detailed description of the property (minimum 10 characters)"
+                />
+                {form.description.length > 0 && form.description.length < 10 && (
+                  <span className="mt-1 text-xs text-red-500">
+                    Need {10 - form.description.length} more characters
+                  </span>
+                )}
               </label>
               <label className="block">
                 <span className="mb-2 block text-sm text-brand-ink-secondary">Price (ETH equiv.)</span>
@@ -277,7 +321,7 @@ const AdminDashboard = () => {
                   return (
                     <div
                       key={product._id}
-                      className="rounded-xl border border-white/[0.08] bg-brand-bg-base/50 p-4"
+                      className="rounded-xl border border-white/[0.08] bg-brand-bg-base/50 p-4 space-y-3"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -308,6 +352,10 @@ const AdminDashboard = () => {
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Token Listing Manager */}
+                      <TokenListingManager product={product} onUpdate={loadProducts} />
+                      
                       <Link
                         to={`/property/${property.id}`}
                         className="mt-3 inline-block text-sm text-brand-cyan hover:text-brand-cyan-mint"

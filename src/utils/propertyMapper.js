@@ -87,6 +87,7 @@ export function mapProductToProperty(product) {
       expenses: financials.expenses,
       netIncome: financials.netIncome,
     },
+    blockchainListing: product.blockchainListing || null,
     details,
     _source: "api",
   };
@@ -130,6 +131,12 @@ export function buildProductPayload(form) {
     },
   };
 
+  // Backend buildProductImages() expects array of URL strings, not objects
+  // It will convert them to {url, public_id} format after upload
+  const imageArray = imageUrls.length
+    ? imageUrls
+    : ["https://via.placeholder.com/800x600?text=Property"];
+
   return {
     name: form.name,
     description: form.description,
@@ -143,13 +150,11 @@ export function buildProductPayload(form) {
       .filter(Boolean),
     brandname: form.brandname || "Billion Towers",
     logo: form.logoUrl || "https://via.placeholder.com/150?text=BT",
-    images: imageUrls.length
-      ? imageUrls
-      : ["https://via.placeholder.com/800x600?text=Property"],
+    images: imageArray,
     details,
     specifications: [
-      { title: "City", description: form.city },
-      { title: "State", description: form.state },
+      { title: "City", description: form.city || "N/A" },
+      { title: "State", description: form.state || "N/A" },
       { title: "Country", description: form.country || "USA" },
       { title: "Total Shares", description: String(form.totalShares) },
       { title: "Available Shares", description: String(form.availableShares) },
@@ -157,7 +162,7 @@ export function buildProductPayload(form) {
       { title: "Target Yield", description: String(form.targetYield) },
       { title: "Projected ROI", description: String(form.projectedRoi) },
       { title: "Occupancy", description: String(form.occupancy || 0) },
-    ],
+    ].filter(spec => spec.description && spec.description !== ""),
   };
 }
 

@@ -3,11 +3,14 @@ import { motion } from "framer-motion";
 import { Wallet, Unplug, RefreshCw } from "lucide-react";
 import { useWallet } from "../../context/WalletContext";
 import { shortenAddress } from "../../utils/wallet";
+import { getTargetChain, isSupportedChain } from "../../config/web3";
 import toast from "react-hot-toast";
 
 const MarketplaceWalletBar = () => {
   const { wallet, isConnected, connecting, connect, disconnect, refreshWallet } =
     useWallet();
+  const chain = getTargetChain();
+  const onTargetChain = isConnected && isSupportedChain(wallet?.chainId);
 
   const handleConnect = async () => {
     try {
@@ -39,7 +42,7 @@ const MarketplaceWalletBar = () => {
             Connect your wallet to invest on-chain
           </h2>
           <p className="mt-1 text-sm text-brand-ink-secondary">
-            Supports MetaMask and other EIP-1193 wallets. Fiat options available at checkout.
+            Supports MetaMask on {chain.name}. Fiat options available at checkout.
           </p>
         </div>
 
@@ -49,7 +52,9 @@ const MarketplaceWalletBar = () => {
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-sm">
                 <p className="text-[11px] uppercase tracking-wide text-emerald-200/80">Connected</p>
                 <p className="font-mono font-medium text-white">{shortenAddress(wallet.address)}</p>
-                <p className="text-xs text-brand-ink-secondary">{wallet.balanceEth} ETH</p>
+                <p className="text-xs text-brand-ink-secondary">
+                  {wallet.balanceEth} ETH · {onTargetChain ? chain.name : "Wrong network"}
+                </p>
               </div>
               <button
                 type="button"
